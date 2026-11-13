@@ -1,0 +1,125 @@
+.showroom {
+  overflow: hidden;
+  border: 1px solid #dbeafe;
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(ellipse at 82% 0%, rgb(37 99 235 / 9%), transparent 42%),
+    #fff;
+  box-shadow: 0 12px 35px rgb(15 23 42 / 7%);
+}
+
+.showroom__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem 1.75rem;
+}
+
+.showroom__eyebrow {
+  margin: 0 0 0.35rem;
+  color: #0284c7;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.showroom__title {
+  margin: 0;
+  color: #102a50;
+  font-size: 1.35rem;
+  font-weight: 750;
+}
+
+.showroom__description {
+  margin: 0.4rem 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.showroom__reset {
+  flex: 0 0 auto;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.75rem;
+  background: #eff6ff;
+  padding: 0.65rem 0.9rem;
+  color: #1d4ed8;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.showroom__reset:hover {
+  border-color: #93c5fd;
+  background: #dbeafe;
+}
+
+.showroom__reset:focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 3px;
+}
+
+.showroom__canvas {
+  position: relative;
+  height: min(66vh, 650px);
+  min-height: 390px;
+  margin: 0 1rem;
+  overflow: hidden;
+  border: 1px solid #1d3b59;
+  border-radius: 1rem;
+  background: #080f1c;
+}
+
+.showroom__canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.showroom__badge {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  border: 1px solid rgb(126 224 255 / 28%);
+  border-radius: 999px;
+  background: rgb(7 21 41 / 78%);
+  padding: 0.45rem 0.7rem;
+  color: #a7eaff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+.showroom__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.5rem;
+  padding: 1rem 1.75rem 1.25rem;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.showroom__footer strong {
+  color: #1e3a5f;
+}
+
+@media (max-width: 640px) {
+  .showroom__header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 1.25rem;
+  }
+
+  .showroom__canvas {
+    height: 56vh;
+    min-height: 330px;
+    margin: 0 0.6rem;
+  }
+
+  .showroom__footer {
+    padding-inline: 1.25rem;
+  }
+}
