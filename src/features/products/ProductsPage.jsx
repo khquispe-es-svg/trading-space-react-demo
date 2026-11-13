@@ -8,6 +8,11 @@ import {
   updateProduct,
   validateProductImageFile,
 } from './productService.js'
+import {
+  normalizeProductFieldInput,
+  validateProductBrand,
+  validateProductModel,
+} from './productFormUtils.js'
 
 const Phone3DViewer = lazy(() => import('./Phone3DViewer.jsx'))
 const localProductImageModules = import.meta.glob(
@@ -37,15 +42,19 @@ function resolveProjectImage(reference) {
   ) ?? null
 }
 
+const productChoiceOptions = {
+  ram: ['4GB', '6GB', '8GB', '12GB', '16GB', '24GB'],
+  almacenamiento: ['64GB', '128GB', '256GB', '512GB', '1TB', '2TB'],
+}
 const editableFields = [
-  { name: 'marca', label: 'Marca', type: 'text' },
-  { name: 'modelo', label: 'Modelo', type: 'text' },
-  { name: 'ram', label: 'RAM', type: 'text' },
-  { name: 'almacenamiento', label: 'Almacenamiento', type: 'text' },
-  { name: 'precio_venta', label: 'Precio de venta', type: 'number' },
-  { name: 'stock_minimo', label: 'Stock mínimo', type: 'number' },
+  { name: 'marca', label: 'Marca', type: 'brand' },
+  { name: 'modelo', label: 'Modelo', type: 'model' },
+  { name: 'ram', label: 'RAM', type: 'choice' },
+  { name: 'almacenamiento', label: 'Almacenamiento', type: 'choice' },
+  { name: 'precio_venta', label: 'Precio de venta', type: 'decimal' },
+  { name: 'stock_minimo', label: 'Stock mínimo', type: 'integer' },
   { name: 'codigo', label: 'Código', type: 'text' },
-  { name: 'estatus', label: 'Estado', type: 'text' },
+  { name: 'estatus', label: 'Estado', type: 'status' },
   { name: 'descripcion', label: 'Descripción', type: 'textarea' },
   { name: 'imagen', label: 'Imagen del producto', type: 'image' },
 ]
@@ -821,6 +830,39 @@ function ProductsPage({ canManage = false }) {
   const [writeError, setWriteError] = useState('')
   const [writeSuccess, setWriteSuccess] = useState('')
   const [saving, setSaving] = useState(false)
+  const brandSuggestions = useMemo(
+    () =>
+      [
+        ...new Set(
+          products
+            .map((product) => String(product.marca ?? '').trim())
+            .filter(Boolean),
+        ),
+      ].sort((left, right) => left.localeCompare(right)),
+    [products],
+  )
+  const modelSuggestions = useMemo(
+    () =>
+      [
+        ...new Set(
+          products
+            .map((product) => String(product.modelo ?? '').trim())
+            .filter(Boolean),
+        ),
+      ].sort((left, right) => left.localeCompare(right)),
+    [products],
+  )
+  const productStatusOptions = useMemo(
+    () => [
+      ...new Set([
+        'ACTIVO',
+        ...products
+          .map((product) => String(product.estatus ?? '').trim())
+          .filter(Boolean),
+      ]),
+    ],
+    [products],
+  )
 
   useEffect(() => {
     let active = true
@@ -940,6 +982,12 @@ function ProductsPage({ canManage = false }) {
     setWriteSuccess('')
 
     try {
+      const brandError = validateProductBrand(draft.marca)
+      if (brandError) throw new Error(brandError)
+
+      const modelError = validateProductModel(draft.modelo)
+      if (modelError) throw new Error(modelError)
+
       const imei1 = imeiDraft.imei1.trim()
       const imei2 = imeiDraft.imei2.trim()
       const imei1Error = validateImei(imei1, 'IMEI 1')
@@ -1065,11 +1113,70 @@ function ProductsPage({ canManage = false }) {
     const controlClass =
       'mt-1 block w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100'
     const onChange = (event) => {
+      const value = ['brand', 'model', 'decimal', 'integer'].includes(type)
+        ? normalizeProductFieldInput(type, event.target.value)
+        : event.target.value
+      if (value === null) return
+
       setDraft((current) => ({
         ...current,
-        [name]: event.target.value,
+        [name]: value,
       }))
       setWriteError('')
+    }
+
+    if (type === 'choice') {
+      const currentValue = String(draft[name] ?? '')
+      const options = productChoiceOptions[name]
+      const availableOptions =
+        currentValue && !options.includes(currentValue)
+          ? [...options, currentValue]
+          : options
+
+      return (
+        <label className={fieldClass} key={name}>
+          {label}
+          <select
+            className={`${controlClass} h-8 bg-white`}
+            onChange={onChange}
+            value={currentValue}
+          >
+            <option value="">Sin especificar</option>
+            {availableOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+      )
+    }
+
+    if (type === 'status') {
+      const currentStatus = String(draft[name] ?? '')
+      const statusOptions = productStatusOptions.includes(currentStatus)
+        ? productStatusOptions
+        : currentStatus
+          ? [...productStatusOptions, currentStatus]
+          : productStatusOptions
+
+      return (
+        <label className={fieldClass} key={name}>
+          {label}
+          <select
+            className={`${controlClass} h-8 bg-white`}
+            onChange={onChange}
+            value={currentStatus}
+          >
+            <option value="">Sin especificar</option>
+            {statusOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+      )
     }
 
     return (
@@ -1081,12 +1188,33 @@ function ProductsPage({ canManage = false }) {
             onChange={onChange}
             value={draft[name]}
           />
+        ) : type === 'brand' || type === 'model' ? (
+          <>
+            <input
+              className={`${controlClass} h-8`}
+              list={`product-${name}-options`}
+              onChange={onChange}
+              type="text"
+              value={draft[name]}
+            />
+            <datalist id={`product-${name}-options`}>
+              {(type === 'brand' ? brandSuggestions : modelSuggestions).map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </>
         ) : (
           <input
             className={`${controlClass} h-8`}
             onChange={onChange}
-            step={type === 'number' ? 'any' : undefined}
-            type={type}
+            inputMode={
+              type === 'decimal'
+                ? 'decimal'
+                : type === 'integer'
+                  ? 'numeric'
+                  : undefined
+            }
+            type={type === 'decimal' || type === 'integer' ? 'text' : type}
             value={draft[name]}
           />
         )}
@@ -1178,6 +1306,15 @@ function ProductsPage({ canManage = false }) {
                 {formMode === 'edit' ? 'Editar producto' : 'Nuevo producto'}
               </h4>
             </div>
+            {writeError && (
+              <div
+                className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+                role="alert"
+              >
+                <p className="font-semibold">No se pudo completar la operación.</p>
+                <p className="mt-1 break-words">{writeError}</p>
+              </div>
+            )}
             <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] leading-5 text-blue-900">
               <p>Al editar, deja vacío un campo para conservar su IMEI actual.</p>
               {formMode === 'edit' && (
@@ -1209,12 +1346,19 @@ function ProductsPage({ canManage = false }) {
                       className="mt-1 block h-8 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                       inputMode="numeric"
                       onChange={(event) => {
+                        const value = normalizeProductFieldInput(
+                          'imei',
+                          event.target.value,
+                        )
+                        if (value === null) return
+
                         setImeiDraft((current) => ({
                           ...current,
-                          [name]: event.target.value,
+                          [name]: value,
                         }))
                         setWriteError('')
                       }}
+                      maxLength={15}
                       pattern="[0-9]*"
                       type="text"
                       value={imeiDraft[name]}
